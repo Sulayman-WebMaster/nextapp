@@ -1,0 +1,752 @@
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\next-env.d.ts
+// --------------------
+/// <reference types="next" />
+/// <reference types="next/image-types/global" />
+/// <reference path="./.next/types/routes.d.ts" />
+
+// NOTE: This file should not be edited
+// see https://nextjs.org/docs/app/api-reference/config/typescript for more information.
+
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\next.config.ts
+// --------------------
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  /* config options here */
+};
+
+export default nextConfig;
+
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\src\app\api\auth\route.ts
+// --------------------
+import { handlers } from "@/app/auth";
+
+
+export const { GET, POST } = handlers;
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\src\app\api\products\route.ts
+// --------------------
+import { NextResponse } from 'next/server';
+import { getProducts, addProduct } from '@/lib/products';
+
+export async function GET() {
+  const products = await getProducts();
+  return NextResponse.json(products);
+}
+
+export async function POST(req: Request) {
+  const newProduct = await req.json();
+  const product = await addProduct(newProduct);
+  return NextResponse.json(product, { status: 201 });
+}
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\src\app\api\products\[id]\route.ts
+// --------------------
+import { NextResponse } from 'next/server';
+import { getProduct, updateProduct, deleteProduct } from '@/lib/products';
+
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const product = await getProduct(params.id);
+  if (!product) {
+    return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+  }
+  return NextResponse.json(product);
+}
+
+export async function PUT(req: Request, { params }: { params: { id: string } }) {
+  const updatedData = await req.json();
+  const product = await updateProduct(params.id, updatedData);
+  if (!product) {
+    return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+  }
+  return NextResponse.json(product);
+}
+
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+  const product = await deleteProduct(params.id);
+  if (!product) {
+    return NextResponse.json({ error: 'Product not found' }, { status: 404 });
+  }
+  return NextResponse.json({ message: 'Product deleted' });
+}
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\src\app\api\register\route.ts
+// --------------------
+import { NextResponse } from 'next/server';
+import fs from 'fs/promises';
+import path from 'path';
+import bcrypt from 'bcryptjs';
+
+const usersFile = path.join(process.cwd(), 'data/users.json');
+
+async function getUsers() {
+  try {
+    const data = await fs.readFile(usersFile, 'utf-8');
+    return JSON.parse(data);
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function POST(req: Request) {
+  const { username, email, password } = await req.json();
+  if (!username || !email || !password) {
+    return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+  }
+  const users = await getUsers();
+  if (users.find((u: any) => u.email === email)) {
+    return NextResponse.json({ error: 'User exists' }, { status: 400 });
+  }
+  const hashed = bcrypt.hashSync(password, 10);
+  const newUser = { id: users.length + 1, name: username, email, password: hashed };
+  users.push(newUser);
+  await fs.writeFile(usersFile, JSON.stringify(users, null, 2));
+  return NextResponse.json({ message: 'User created' }, { status: 201 });
+}
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\src\app\auth.ts
+// --------------------
+import NextAuth, { NextAuthConfig } from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
+import bcrypt from "bcryptjs";
+import fs from "fs/promises";
+import path from "path";
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+}
+
+const usersFile = path.join(process.cwd(), "data/users.json");
+
+async function getUsers(): Promise<User[]> {
+  try {
+    const data = await fs.readFile(usersFile, "utf-8");
+    return JSON.parse(data) as User[];
+  } catch {
+    return [];
+  }
+}
+
+const authOptions: NextAuthConfig = {
+  providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID ?? "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+    }),
+
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials): Promise<User | null> {
+        if (!credentials?.email || !credentials?.password) return null;
+
+        const users = await getUsers();
+        const user = users.find((u) => u.email === credentials.email);
+
+        if (user && bcrypt.compareSync(credentials.password, user.password)) {
+          return { id: user.id, name: user.name, email: user.email, password: "" };
+        }
+        return null;
+      },
+    }),
+  ],
+
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = (user as User).id;
+      }
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+      }
+      return session;
+    },
+  },
+};
+
+export const { handlers, auth, signIn, signOut } = NextAuth(authOptions);
+
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\src\app\dashboard\add-product\page.tsx
+// --------------------
+"use client";
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
+
+export default function AddProduct() {
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  const handleSubmit = async (formData: FormData) => {
+    startTransition(async () => {
+      const res = await fetch("/api/products", {
+        method: "POST",
+        body: JSON.stringify({
+          name: formData.get("name"),
+          description: formData.get("description"),
+          price: parseFloat(formData.get("price") as string),
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.ok) {
+        toast.success("Product added!");
+        router.push("/dashboard");
+      } else {
+        toast.error("Failed to add product.");
+      }
+    });
+  };
+
+  return (
+    <div className="p-10 bg-gray-100 dark:bg-gray-800 min-h-screen">
+      <div className="bg-white dark:bg-gray-700 p-8 rounded-lg shadow-md max-w-md mx-auto">
+        <h1 className="text-2xl font-bold mb-6">Add Product</h1>
+        <form action={handleSubmit} className="flex flex-col space-y-4">
+          <input name="name" placeholder="Name" className="border p-2 rounded dark:bg-gray-600 dark:text-white" required />
+          <input name="description" placeholder="Description" className="border p-2 rounded dark:bg-gray-600 dark:text-white" required />
+          <input name="price" type="number" placeholder="Price" className="border p-2 rounded dark:bg-gray-600 dark:text-white" required />
+          <button type="submit" disabled={isPending} className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
+            {isPending ? "Adding..." : "Add Product"}
+          </button>
+          {isPending && <div className="spinner mx-auto"></div>}
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\src\app\dashboard\edit-product\[id]\page.tsx
+// --------------------
+"use client";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
+
+export default function EditProduct({ params }: { params: { id: string } }) {
+  const [product, setProduct] = useState({ name: "", description: "", price: 0 });
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  useEffect(() => {
+    fetch(`/api/products/${params.id}`)
+      .then((res) => res.json())
+      .then(setProduct);
+  }, [params.id]);
+
+  const handleSubmit = async (formData: FormData) => {
+    startTransition(async () => {
+      const res = await fetch(`/api/products/${params.id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          name: formData.get("name"),
+          description: formData.get("description"),
+          price: parseFloat(formData.get("price") as string),
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.ok) {
+        toast.success("Product updated!");
+        router.push("/dashboard");
+      } else {
+        toast.error("Failed to update product.");
+      }
+    });
+  };
+
+  return (
+    <div className="p-10 bg-gray-100 dark:bg-gray-800 min-h-screen">
+      <div className="bg-white dark:bg-gray-700 p-8 rounded-lg shadow-md max-w-md mx-auto">
+        <h1 className="text-2xl font-bold mb-6">Edit Product</h1>
+        <form action={handleSubmit} className="flex flex-col space-y-4">
+          <input name="name" placeholder="Name" defaultValue={product.name} className="border p-2 rounded dark:bg-gray-600 dark:text-white" required />
+          <input name="description" placeholder="Description" defaultValue={product.description} className="border p-2 rounded dark:bg-gray-600 dark:text-white" required />
+          <input name="price" type="number" placeholder="Price" defaultValue={product.price} className="border p-2 rounded dark:bg-gray-600 dark:text-white" required />
+          <button type="submit" disabled={isPending} className="bg-green-500 text-white p-2 rounded hover:bg-green-600">
+            {isPending ? "Updating..." : "Update Product"}
+          </button>
+          {isPending && <div className="spinner mx-auto"></div>}
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\src\app\dashboard\page.tsx
+// --------------------
+"use client";
+import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
+
+export default function Dashboard() {
+  const [products, setProducts] = useState([]);
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  useEffect(() => {
+    fetch("/api/products")
+      .then((res) => res.json())
+      .then(setProducts);
+  }, []);
+
+  const handleDelete = (id: number) => {
+    startTransition(async () => {
+      const res = await fetch(`/api/products/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        toast.success("Product deleted");
+        setProducts(products.filter((p: any) => p.id !== id));
+      } else {
+        toast.error("Failed to delete");
+      }
+    });
+  };
+
+  return (
+    <div className="p-10 bg-gray-100 dark:bg-gray-800 min-h-screen">
+      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+      <Link href="/dashboard/add-product" className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mb-4 inline-block">
+        Add Product
+      </Link>
+      <ul className="space-y-4">
+        {products.map((p: any) => (
+          <li key={p.id} className="flex justify-between items-center border p-4 rounded-lg shadow-md bg-white dark:bg-gray-700">
+            <span>{p.name} - ${p.price}</span>
+            <div>
+              <Link href={`/dashboard/edit-product/${p.id}`} className="text-blue-500 hover:underline mr-4">Edit</Link>
+              <button onClick={() => handleDelete(p.id)} className="text-red-500 hover:underline" disabled={isPending}>
+                Delete
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {isPending && <div className="spinner mx-auto mt-4"></div>}
+    </div>
+  );
+}
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\src\app\layout.tsx
+// --------------------
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { ThemeProvider } from "next-themes";
+import { Toaster } from "react-hot-toast";
+
+const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  title: "E-Commerce App",
+  description: "Built with Next.js 15",
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.className} bg-white dark:bg-gray-900 text-black dark:text-white`}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          {children}
+          <Toaster position="top-right" />
+        </ThemeProvider>
+      </body>
+    </html>
+  );
+}
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\src\app\login\page.tsx
+// --------------------
+
+import { redirect } from "next/navigation";
+import { signIn } from "../auth";
+
+export default function Login() {
+  const handleCredentials = async (formData: FormData) => {
+    "use server";
+    await signIn("credentials", {
+      email: formData.get("email"),
+      password: formData.get("password"),
+      redirect: false,
+    });
+    redirect("/dashboard");
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+      <div className="bg-white dark:bg-gray-700 p-8 rounded-lg shadow-md w-96">
+        <h1 className="text-2xl font-bold mb-6 text-center">Login</h1>
+        {/* Credentials Form */}
+        <form action={handleCredentials} className="flex flex-col space-y-4">
+          <input name="email" type="email" placeholder="Email" className="border p-2 rounded dark:bg-gray-600 dark:text-white" required />
+          <input name="password" type="password" placeholder="Password" className="border p-2 rounded dark:bg-gray-600 dark:text-white" required />
+          <button type="submit" className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600">Login with Credentials</button>
+        </form>
+
+        {/* Google */}
+        <form
+          action={async () => {
+            "use server";
+            await signIn("google", { redirectTo: "/dashboard" });
+          }}
+          className="mt-4"
+        >
+          <button type="submit" className="bg-red-500 text-white p-2 rounded w-full hover:bg-red-600">Login with Google</button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\src\app\middleware.ts
+// --------------------
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "./auth";
+
+export async function middleware(req: NextRequest) {
+  const session = await auth();
+  if (!session && req.nextUrl.pathname.startsWith("/dashboard")) {
+    const from = req.nextUrl.pathname;
+    return NextResponse.redirect(new URL(`/login?from=${from}`, req.url));
+  }
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/dashboard/:path*"],
+};
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\src\app\page.tsx
+// --------------------
+"use client";
+import Link from "next/link";
+
+export default function Home() {
+  return (
+    <div className="min-h-screen flex flex-col">
+      {/* Navbar */}
+      <nav className="bg-gray-800 p-4 text-white flex justify-between items-center shadow-md">
+        <Link href="/" className="text-lg font-bold">E-Commerce</Link>
+        <div className="flex space-x-4">
+          <Link href="/products" className="hover:underline">Products</Link>
+          <Link href="/login" className="hover:underline">Login</Link>
+          <Link href="/signup" className="hover:underline">Signup</Link>
+          {/* Theme Toggle */}
+          <button
+            onClick={() => {
+              const theme = document.documentElement.classList.contains('dark') ? 'light' : 'dark';
+              document.documentElement.classList.toggle('dark');
+              localStorage.setItem('theme', theme);
+            }}
+            className="bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded text-white"
+          >
+            Toggle Theme
+          </button>
+        </div>
+      </nav>
+
+      {/* Hero */}
+      <section className="bg-blue-500 text-white p-20 text-center flex-grow">
+        <h1 className="text-4xl font-bold mb-4">Welcome to Our E-Commerce Site</h1>
+        <p className="text-lg">Discover amazing products!</p>
+      </section>
+
+      {/* Product Highlights */}
+      <section className="p-10 bg-gray-100 dark:bg-gray-800">
+        <h2 className="text-2xl font-bold mb-4 text-center">Highlights</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="border rounded-lg p-4 shadow-md bg-white dark:bg-gray-700">Product A - $10</div>
+          <div className="border rounded-lg p-4 shadow-md bg-white dark:bg-gray-700">Product B - $20</div>
+          <div className="border rounded-lg p-4 shadow-md bg-white dark:bg-gray-700">Product C - $30</div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-800 text-white p-4 text-center mt-auto">
+        © 2025 E-Commerce App
+      </footer>
+    </div>
+  );
+}
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\src\app\products\page.tsx
+// --------------------
+import Link from "next/link";
+import { getProducts } from "@/lib/products";
+
+export default async function Products() {
+  const products = await getProducts();
+
+  return (
+    <div className="p-10 bg-gray-100 dark:bg-gray-800 min-h-screen">
+      <h1 className="text-3xl font-bold mb-6">Products</h1>
+      <ul className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {products.map((p) => (
+          <li key={p.id} className="border rounded-lg p-4 shadow-md bg-white dark:bg-gray-700 hover:shadow-lg transition">
+            <Link href={`/products/${p.id}`} className="text-blue-500 hover:underline">
+              {p.name} - ${p.price.toFixed(2)}
+            </Link>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mt-2">{p.description}</p>
+          </li>
+        ))}
+      </ul>
+      {products.length === 0 && <p className="text-center text-gray-500">No products found.</p>}
+    </div>
+  );
+}
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\src\app\products\[id]\page.tsx
+// --------------------
+import { notFound } from "next/navigation";
+import { getProduct } from "@/lib/products";
+
+export default async function ProductDetail({ params }: { params: { id: string } }) {
+  const product = await getProduct(params.id);
+  if (!product) notFound();
+
+  return (
+    <div className="p-10 bg-gray-100 dark:bg-gray-800 min-h-screen">
+      <div className="bg-white dark:bg-gray-700 p-8 rounded-lg shadow-md max-w-2xl mx-auto">
+        <h1 className="text-3xl font-bold mb-4">{product.name}</h1>
+        <p className="mb-4 text-gray-700 dark:text-gray-300">{product.description}</p>
+        <p className="font-semibold text-xl">Price: ${product.price.toFixed(2)}</p>
+      </div>
+    </div>
+  );
+}
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\src\app\signup\page.tsx
+// --------------------
+"use client";
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
+
+export default function Signup() {
+  const [isPending, startTransition] = useTransition();
+  const router = useRouter();
+
+  const handleSubmit = async (formData: FormData) => {
+    startTransition(async () => {
+      const res = await fetch("/api/register", {
+        method: "POST",
+        body: JSON.stringify({
+          username: formData.get("username"),
+          email: formData.get("email"),
+          password: formData.get("password"),
+        }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (res.ok) {
+        toast.success("Account created! Please login.");
+        router.push("/login");
+      } else {
+        const { error } = await res.json();
+        toast.error(error || "Failed to create account.");
+      }
+    });
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-800">
+      <div className="bg-white dark:bg-gray-700 p-8 rounded-lg shadow-md w-96">
+        <h1 className="text-2xl font-bold mb-6 text-center">Signup</h1>
+        <form action={handleSubmit} className="flex flex-col space-y-4">
+          <input name="username" placeholder="Username" className="border p-2 rounded dark:bg-gray-600 dark:text-white" required />
+          <input name="email" type="email" placeholder="Email" className="border p-2 rounded dark:bg-gray-600 dark:text-white" required />
+          <input name="password" type="password" placeholder="Password" className="border p-2 rounded dark:bg-gray-600 dark:text-white" required />
+          <button type="submit" disabled={isPending} className="bg-green-500 text-white p-2 rounded hover:bg-green-600">
+            {isPending ? "Signing up..." : "Signup"}
+          </button>
+          {isPending && <div className="spinner mx-auto"></div>}
+        </form>
+      </div>
+    </div>
+  );
+}
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\src\lib\products.ts
+// --------------------
+import fs from 'fs/promises';
+import path from 'path';
+
+const dataFile = path.join(process.cwd(), 'data/products.json');
+
+export interface Product {
+  id: number;
+  name: string;
+  description: string;
+  price: number;
+}
+
+export async function getProducts(): Promise<Product[]> {
+  try {
+    const data = await fs.readFile(dataFile, 'utf-8');
+    return JSON.parse(data);
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function getProduct(id: string): Promise<Product | undefined> {
+  const products = await getProducts();
+  return products.find((p) => p.id === parseInt(id, 10));
+}
+
+export async function addProduct(newProduct: Omit<Product, 'id'>): Promise<Product> {
+  const products = await getProducts();
+  const product = { ...newProduct, id: products.length + 1 };
+  products.push(product);
+  await fs.writeFile(dataFile, JSON.stringify(products, null, 2));
+  return product;
+}
+
+export async function updateProduct(id: string, updatedData: Partial<Product>): Promise<Product | undefined> {
+  const products = await getProducts();
+  const index = products.findIndex((p) => p.id === parseInt(id, 10));
+  if (index === -1) return undefined;
+  products[index] = { ...products[index], ...updatedData };
+  await fs.writeFile(dataFile, JSON.stringify(products, null, 2));
+  return products[index];
+}
+
+export async function deleteProduct(id: string): Promise<Product | undefined> {
+  const products = await getProducts();
+  const index = products.findIndex((p) => p.id === parseInt(id, 10));
+  if (index === -1) return undefined;
+  const deleted = products.splice(index, 1)[0];
+  await fs.writeFile(dataFile, JSON.stringify(products, null, 2));
+  return deleted;
+}
+
+// --------------------
+// File: D:\web-project\SCIC\simplecrudwithauth\tools\combine-files.js
+// --------------------
+/**
+ * combine-files.js
+ *
+ * 선택한 폴더와 하위폴더 포함 모든 파일을 읽어서
+ * output.txt 파일로 합친다
+ */
+//node tools/combine-files.js
+
+const fs = require('fs');
+const path = require('path');
+
+// 1) 합칠 대상 폴더 경로 설정
+// const baseFolder = path.join(__dirname, '../..', 's1-frontend-main');
+const baseFolder = path.join(__dirname, '../');
+
+// 2) 결과를 저장할 파일 경로
+const outputFile = path.join(__dirname, 'output.txt');
+
+// ------------------------------------------------------------
+
+// 제외할 파일 목록
+const excludeFiles = [
+  'tsconfig.tsbuildinfo',
+  '.env',
+  'favicon.ico',
+  '.eslintrc.js',
+  'jest.config.js',
+  'tsconfig.json',
+  '.env.docker',
+  '.env.local',
+  'eslint.config.js',
+];
+
+// 제외할 폴더 목록
+const excludeFolders = ['node_modules', '.next', 'dist', 'public', '.turbo', 'test', 'test-e2e', 'test-results'];
+
+// 허용할 파일 확장자 (코드 파일만 포함)
+const allowedExtensions = ['.js', '.ts', '.jsx', '.tsx'];
+
+/**
+ * 지정한 폴더(dirPath)와 그 하위폴더에 있는 모든 파일 경로를
+ * 하나의 배열(arrayOfFiles)로 반환한다.
+ */
+function getAllFiles(dirPath, arrayOfFiles = []) {
+  if (excludeFolders.some(folder => dirPath.includes(`${path.sep}${folder}${path.sep}`)
+    || dirPath.endsWith(`${path.sep}${folder}`))) {
+    return arrayOfFiles;
+  }
+
+  const files = fs.readdirSync(dirPath);
+
+  files.forEach((file) => {
+    const filePath = path.join(dirPath, file);
+    const stat = fs.statSync(filePath);
+
+    if (stat.isDirectory()) {
+      getAllFiles(filePath, arrayOfFiles);
+    } else {
+      const ext = path.extname(file).toLowerCase();
+      if (!excludeFiles.includes(file) && allowedExtensions.includes(ext)) {
+        arrayOfFiles.push(filePath);
+      }
+    }
+  });
+
+  return arrayOfFiles;
+}
+
+/**
+ * 수집한 파일 목록을 순회하며 파일 내용을 합쳐서 outputFile에 기록한다.
+ */
+function combineFiles() {
+  const allFiles = getAllFiles(baseFolder);
+  let combinedContent = '';
+
+  allFiles.forEach((filePath) => {
+    const content = fs.readFileSync(filePath, 'utf-8');
+    combinedContent += `// --------------------\n`;
+    combinedContent += `// File: ${filePath}\n`;
+    combinedContent += `// --------------------\n`;
+    combinedContent += `${content}\n\n`;
+  });
+
+  fs.writeFileSync(outputFile, combinedContent);
+  console.log(`All files combined into => ${outputFile}`);
+}
+
+combineFiles();
+
+/**
+ * 명령프롬프트(터미널)에서 M-1-BACKEND/tools 폴더에서 다음 명령어로 실행:
+ * node combine-files.js
+ */
+
