@@ -14,6 +14,7 @@ import {
 } from "react-icons/fa";
 import { HiSparkles } from "react-icons/hi";
 import { MdLocalOffer, MdSecurity } from "react-icons/md";
+import Link from "next/link";
 
 export default async function ProductDetail({ params }: { params: { id: string } }) {
   const product = await getProduct(params.id);
@@ -25,9 +26,9 @@ export default async function ProductDetail({ params }: { params: { id: string }
       <div className="border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
         <div className="mx-auto max-w-7xl px-6 py-4">
           <nav className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-            <a href="/" className="hover:text-blue-600 transition-colors">Home</a>
+            <Link href="/" className="hover:text-blue-600 transition-colors">Home</Link>
             <span>/</span>
-            <a href="/products" className="hover:text-blue-600 transition-colors">Products</a>
+            <Link href="/products" className="hover:text-blue-600 transition-colors">Products</Link>
             <span>/</span>
             <span className="text-gray-900 dark:text-white font-medium">{product.name}</span>
           </nav>

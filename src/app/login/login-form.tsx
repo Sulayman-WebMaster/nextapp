@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "react-hot-toast"
 import { FaGoogle, FaEye, FaEyeSlash, FaEnvelope, FaLock, FaSpinner } from "react-icons/fa"
 import { HiSparkles } from "react-icons/hi"
+import Link from "next/link"
 
 export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
@@ -106,9 +107,9 @@ export default function LoginForm() {
 
         {/* Forgot Password Link */}
         <div className="text-right">
-          <a href="#" className="text-sm text-blue-500 hover:text-blue-600 transition-colors">
+          <Link href="#" className="text-sm text-blue-500 hover:text-blue-600 transition-colors">
             Forgot password?
-          </a>
+          </Link>
         </div>
 
         {/* Login Button */}
@@ -151,9 +152,9 @@ export default function LoginForm() {
       {/* Sign Up Link */}
       <p className="text-center text-gray-600 dark:text-gray-400 mt-6">
         Don't have an account?{" "}
-        <a href="/signup" className="text-blue-500 hover:text-blue-600 font-semibold transition-colors hover:underline">
+        <Link href="/signup" className="text-blue-500 hover:text-blue-600 font-semibold transition-colors hover:underline">
           Create one here
-        </a>
+        </Link>
       </p>
     </div>
   )

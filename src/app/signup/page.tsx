@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import { FaUser, FaEnvelope, FaLock, FaEye, FaEyeSlash, FaSpinner, FaUserPlus } from "react-icons/fa";
 import { HiSparkles } from "react-icons/hi";
 import { MdSecurity } from "react-icons/md";
+import Link from "next/link";
 
 export default function Signup() {
   const [isPending, startTransition] = useTransition();
@@ -187,13 +188,13 @@ export default function Signup() {
                 />
                 <label htmlFor="terms" className="text-sm text-gray-600 dark:text-gray-400">
                   I agree to the{" "}
-                  <a href="#" className="text-green-500 hover:text-green-600 underline">
+                  <Link href="#" className="text-green-500 hover:text-green-600 underline">
                     Terms of Service
-                  </a>{" "}
+                  </Link>{" "}
                   and{" "}
-                  <a href="#" className="text-green-500 hover:text-green-600 underline">
+                  <Link href="#" className="text-green-500 hover:text-green-600 underline">
                     Privacy Policy
-                  </a>
+                  </Link>
                 </label>
               </div>
 
@@ -220,9 +221,9 @@ export default function Signup() {
             {/* Login Link */}
             <p className="text-center text-gray-600 dark:text-gray-400 mt-6">
               Already have an account?{" "}
-              <a href="/login" className="text-green-500 hover:text-green-600 font-semibold transition-colors hover:underline">
+              <Link href="/login" className="text-green-500 hover:text-green-600 font-semibold transition-colors hover:underline">
                 Sign in here
-              </a>
+              </Link>
             </p>
           </div>
         </div>

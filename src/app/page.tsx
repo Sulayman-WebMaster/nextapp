@@ -502,30 +502,30 @@ export default function Home() {
             <div>
               <h4 className="font-semibold mb-4">Shop</h4>
               <ul className={`space-y-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                <li><a href="#" className="hover:opacity-70 transition-opacity">All Products</a></li>
-                <li><a href="#" className="hover:opacity-70 transition-opacity">New Arrivals</a></li>
-                <li><a href="#" className="hover:opacity-70 transition-opacity">Best Sellers</a></li>
-                <li><a href="#" className="hover:opacity-70 transition-opacity">Sale</a></li>
+                <li><Link href="#" className="hover:opacity-70 transition-opacity">All Products</Link></li>
+                <li><Link href="#" className="hover:opacity-70 transition-opacity">New Arrivals</Link></li>
+                <li><Link href="#" className="hover:opacity-70 transition-opacity">Best Sellers</Link></li>
+                <li><Link href="#" className="hover:opacity-70 transition-opacity">Sale</Link></li>
               </ul>
             </div>
             
             <div>
               <h4 className="font-semibold mb-4">Support</h4>
               <ul className={`space-y-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                <li><a href="#" className="hover:opacity-70 transition-opacity">Contact Us</a></li>
-                <li><a href="#" className="hover:opacity-70 transition-opacity">Size Guide</a></li>
-                <li><a href="#" className="hover:opacity-70 transition-opacity">Returns</a></li>
-                <li><a href="#" className="hover:opacity-70 transition-opacity">FAQ</a></li>
+                <li><Link href="#" className="hover:opacity-70 transition-opacity">Contact Us</Link></li>
+                <li><Link href="#" className="hover:opacity-70 transition-opacity">Size Guide</Link></li>
+                <li><Link href="#" className="hover:opacity-70 transition-opacity">Returns</Link></li>
+                <li><Link href="#" className="hover:opacity-70 transition-opacity">FAQ</Link></li>
               </ul>
             </div>
             
             <div>
               <h4 className="font-semibold mb-4">Company</h4>
               <ul className={`space-y-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                <li><a href="#" className="hover:opacity-70 transition-opacity">About</a></li>
-                <li><a href="#" className="hover:opacity-70 transition-opacity">Careers</a></li>
-                <li><a href="#" className="hover:opacity-70 transition-opacity">Privacy</a></li>
-                <li><a href="#" className="hover:opacity-70 transition-opacity">Terms</a></li>
+                <li><Link href="#" className="hover:opacity-70 transition-opacity">About</Link></li>
+                <li><Link href="#" className="hover:opacity-70 transition-opacity">Careers</Link></li>
+                <li><Link href="#" className="hover:opacity-70 transition-opacity">Privacy</Link></li>
+                <li><Link href="#" className="hover:opacity-70 transition-opacity">Terms</Link></li>
               </ul>
             </div>
           </div>
