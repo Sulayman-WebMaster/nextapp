@@ -1,37 +1,56 @@
-[This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🛍️ Next.js Product Management App
 
-## Getting Started
+A simple product management application built with **Next.js 15 (App Router)** and **NextAuth.js**.  
+The app includes public product pages, authentication, and a protected dashboard to add new products.
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🚀 Features
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Public Pages
+- **Landing Page (/**) → Includes Navbar, Hero, Product Highlights, and Footer
+- **Product List Page (/products)** → Displays all products with name, description, price, and details button
+- **Product Details Page (/products/[id])** → Full details of a single product
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Authentication
+- Login with **NextAuth.js** (Google or Credentials)
+- Redirects to `/products` after successful login
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Protected Page
+- **Add Product (/dashboard/add-product)** → Accessible only when logged in
+- Includes form to add new product and save to mock database
 
-## Learn More
+### Optional Enhancements
+- Loading spinner on form submit
+- Toast messages for success feedback
+- Light/Dark theme toggle
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🛠️ Tech Stack
+- **Next.js 15 (App Router)**
+- **NextAuth.js** for authentication
+- **Tailwind CSS** for styling
+- **API Route Handlers (/api)** for mock backend
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+---
 
-## Deploy on Vercel
+## 📂 Routes Summary
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Route                        | Description                                      | Auth Required |
+|------------------------------|--------------------------------------------------|---------------|
+| `/`                          | Landing Page with hero, highlights, footer       | ❌ No         |
+| `/login`                     | Login page with Google/Credentials auth          | ❌ No         |
+| `/products`                  | Product listing (all products)                   | ❌ No         |
+| `/products/[id]`             | Product details page                             | ❌ No         |
+| `/dashboard/add-product`     | Protected form to add a new product              | ✅ Yes        |
+| `/api/products`              | API endpoint to fetch or add products            | ❌/✅ Mixed   |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-](https://github.com/Sulayman-WebMaster/nextapp)
+---
+
+## ⚙️ Setup & Installation
+
+1. **Clone Repository**
+   ```bash
+   git clone https://github.com/your-username/nextjs-product-app.git
+   cd nextjs-product-app
