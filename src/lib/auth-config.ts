@@ -1,6 +1,10 @@
 import NextAuth from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
+import type { JWT } from "next-auth/jwt"
+import type { Session, User, Profile } from "next-auth"
+import type { Account } from "next-auth"
+import type { AdapterUser } from "@auth/core/adapters"
 
 export const authConfig = {
   providers: [
@@ -43,19 +47,26 @@ export const authConfig = {
     })
   ],
   callbacks: {
-    jwt: async ({ token, user }: any) => {
+    jwt: async ({ token, user }: { token: JWT; user?: User }) => {
       if (user) {
         token.id = user.id
       }
       return token
     },
-    session: async ({ session, token }: any) => {
-      if (token?.id) {
-        session.user.id = token.id
+    session: async ({ session, token }: { session: Session; token: JWT }) => {
+      if (token?.id && session.user) {
+        session.user.id = token.id as string
       }
       return session
     },
-    signIn: async ({ user, account }: any) => {
+    signIn: async (params: { 
+      user: User | AdapterUser; 
+      account?: Account | null | undefined; 
+      profile?: Profile | undefined; 
+      email?: { verificationRequest?: boolean | undefined } | undefined; 
+      credentials?: Record<string, unknown> | undefined 
+    }) => {
+      const { user, account } = params;
       if (account?.provider === "google") {
         try {
           // Call API to handle Google user registration
